@@ -1,7 +1,10 @@
 import pymongo
 import requests
 import random
+
 from flask import Flask
+
+
 
 def main():
     user_name = "admin"
@@ -9,8 +12,8 @@ def main():
     client = pymongo.MongoClient(
         f"mongodb+srv://{user_name}:{password}@cluster0.rz1pu.mongodb.net/myFirstDatabase?retryWrites=true&w=majority&ssl=true&ssl_cert_reqs=CERT_NONE")
     db = client.mangaDB
-    mangaCollection = db.mangas
-    categorieCollection = db.categories
+    manga_collection = db.mangas
+    categorie_collection = db.categories
 
     # Getting elements from an API
     response = requests.get("https://kitsu.io/api/edge/manga?page[limit]=13&page[offset]=1200").json()["data"]
@@ -39,7 +42,7 @@ def main():
         mangaCollection.insert_one(manga)
     """
 
-    # Adding documents to the differents ctegories
+    # Adding documents to the differents categories
     """
     categorieList =  [
         {
@@ -61,6 +64,48 @@ def main():
     ]
     categorieCollection.insert_many(categorieList)
     """
+
+
+app = Flask(__name__)
+
+
+@app.route("/mangas", methods=["POST"])
+def created_mangas():
+    """
+    Add mangas in database
+    Args :
+        "id" : Number,
+        "name" : String,
+        "creation_date" : String,
+        "popular_rate" : Float,
+        "number_chapter" : String,
+    :return:
+        Status 200:
+            {
+                message : Manga has been succesfully added
+            }
+        mangas: [
+            {
+                "id": Number,
+                "name": String,
+                "creation_date": String,
+                "popular_rate": Float,
+                "number_chapter": String,
+            }
+        ]
+    error gestion:
+        Status 400:
+            {
+                error_code: 400,
+                message: Not the right method
+            }
+        Status 404:
+            {
+                error_code: 409,
+                message : A file with the same "id" already exist
+    """
+
+
 
 if __name__ == "__main__":
     main()
