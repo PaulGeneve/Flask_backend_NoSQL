@@ -1,9 +1,10 @@
 import pymongo
 import requests
 import random
+import json
 
 from flask import Flask
-
+from flask import request
 
 user_name = "admin"
 password = "admin1234"
@@ -63,7 +64,6 @@ categorieList =  [
 categorie_collection.insert_many(categorieList)
 """
 
-
 app = Flask(__name__)
 
 
@@ -109,19 +109,14 @@ def display_all_mangas():
     list_mangas = []
     for manga in manga_collection.find():
         list_mangas.append(manga)
-    
     return \
         {
             "mangas": list_mangas
         }
 
 
-
-app = Flask(__name__)
-
-
 @app.route("/mangas", methods=["POST"])
-def created_mangas():
+def create_mangas():
     """
     Add mangas in database
     Args :
@@ -133,17 +128,9 @@ def created_mangas():
     :return:
         Status 200:
             {
-                message : Manga has been succesfully added
+                message : Manga has been successfully added
             }
-        mangas: [
-            {
-                "id": Number,
-                "name": String,
-                "creation_date": String,
-                "popular_rate": Float,
-                "number_chapter": String,
-            }
-        ]
+
     error gestion:
         Status 400:
             {
@@ -156,4 +143,14 @@ def created_mangas():
                 message : A file with the same "id" already exist
     """
 
+    manga = json.loads(request.data.decode("utf-8"))
+    existing_id = False
+    for verify_id in db.mangas.find({}, {"_id": 1}):
+        if verify_id["_id"] == manga["_id"]:
+            existing_id = True
 
+    if existing_id:
+        return "A manga with this ID already exists"
+    else:
+        manga_collection.insert_one(manga)
+        return "The manga has been successfully added"
