@@ -129,6 +129,18 @@ def check_args_value(args):
     if args["sort"]["active"]:
         sort_right = check_sort_arg(args["sort"]["value"])
         args_value["sort_right"] = sort_right
+    if args["name"]["active"]:
+        name_right = check_name_arg(args["name"]["value"])
+        args_value["name_right"] = name_right
+    if args["year"]["active"]:
+        year_right = check_year_arg(args["year"]["value"])
+        args_value["year_right"] = year_right
+    if args["rating"]["active"]:
+        rating_right = check_rating_arg(args["rating"]["value"])
+        args_value["rating_right"] = rating_right
+    if args["pagging"]["active"]:
+        pagging_right = check_pagging_arg(args["pagging"]["value"])
+        args_value["pagging_right"] = pagging_right
     return args_value
 
 def check_sort_arg(sort_arg):
@@ -171,7 +183,81 @@ def check_sort_arg(sort_arg):
     else:
         return {
             "value": False,
-            "order": -1
+            "order": 0
+        }
+
+def check_name_arg(name_arg):
+    """
+    Fonction to check if the value of name argument is a string
+    :param sort_arg: Value of of the sort argument
+    :return:
+        The value if right or False
+    """
+    digit = []
+    digit.append(any(c.isdigit() for c in name_arg))
+    if digit == [False]:
+        return {
+            "value":name_arg,
+            "order": 1
+        }
+    else:
+        return {
+            "value": False,
+            "order": 0
+        }
+
+def check_year_arg(year_arg):
+    """
+    Fonction to check if the value of year argument is a number
+    :param sort_arg: Value of of the sort argument
+    :return:
+        The value if right or False
+    """
+    if year_arg.isnumeric():
+        return {
+            "value":year_arg,
+            "order": 1
+        }
+    else:
+        return {
+            "value": False,
+            "order": 0
+        }
+
+def check_rating_arg(rating_arg):
+    """
+    Fonction to check if the value of rating argument is a number
+    :param sort_arg: Value of of the sort argument
+    :return:
+        The value if right or False
+    """
+    if rating_arg.isnumeric() and float(rating_arg) <= 5 and float(rating_arg) >= 0 and len(rating_arg) == 1:
+        return {
+            "value":rating_arg,
+            "order": 1
+        }
+    else:
+        return {
+            "value": False,
+            "order": 0
+        }
+
+def check_pagging_arg(pagging_arg):
+    """
+    Fonction to check if the value of pagging argument is a number
+    :param sort_arg: Value of of the sort argument
+    :return:
+        The value if right or False
+    """
+    if pagging_arg.isnumeric() and int(pagging_arg) > 0 and int(pagging_arg) <= manga_collection.count() :
+        return {
+            "value":pagging_arg,
+            "order": 1
+        }
+    else:
+        return {
+            "value": False,
+            "order": 0
         }
 
 
@@ -221,10 +307,22 @@ def display_all_mangas():
     args_values = check_args_value(args)
     print(args_values)
     if args_values["sort_right"]["value"] != None and args_values["sort_right"]["value"] != False:
-        for manga in manga_collection.find().sort(args_values["sort_right"]["value"], args_values["sort_right"]["order"]):
+        for manga in manga_collection.find().sort(args_values["sort_right"]["value"],
+                                                  args_values["sort_right"]["order"]):
             list_mangas.append(manga)
-    else:
-        return "Erreur"
+    elif args_values["name_right"]["value"] != None and args_values["name_right"]["value"] != False:
+        for manga in manga_collection.find({ "name": { "$regex": f"{args_values['name_right']['value']}"} }):
+            list_mangas.append(manga)
+    elif args_values["year_right"]["value"] != None and args_values["year_right"]["value"] != False:
+        for manga in manga_collection.find({"creation_date": {"$regex": f"{args_values['year_right']['value']}"}}):
+            list_mangas.append(manga)
+    elif args_values["rating_right"]["value"] != None and args_values["rating_right"]["value"] != False:
+        for manga in manga_collection.find():
+            if args_values["rating_right"]["value"] in str(manga["popular_rate"])[0]:
+                list_mangas.append(manga)
+    elif args_values["pagging_right"]["value"] != None and args_values["pagging_right"]["value"] != False:
+        for i in range(0 , int(args_values["pagging_right"]["value"])):
+            list_mangas.append(manga_collection.find()[i])
 
     return \
         {
