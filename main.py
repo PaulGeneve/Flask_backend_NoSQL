@@ -43,7 +43,7 @@ response = requests.get("https://kitsu.io/api/edge/manga?page[limit]=13&page[off
 
 # Adding documents to the differents categories
 """
-categorieList =  [
+categoryList =  [
     {
         "_id": 1,
         "name": "Shonen"
@@ -61,7 +61,7 @@ categorieList =  [
         "name": "Furyo"
     },
 ]
-categorie_collection.insert_many(categorieList)
+category_collection.insert_many(categoryList)
 """
 
 
