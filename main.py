@@ -12,7 +12,7 @@ client = pymongo.MongoClient(
     f"mongodb+srv://{user_name}:{password}@cluster0.rz1pu.mongodb.net/myFirstDatabase?retryWrites=true&w=majority&ssl=true&ssl_cert_reqs=CERT_NONE")
 db = client.mangaDB
 manga_collection = db.mangas
-categorie_collection = db.categories
+category_collection = db.categories
 
 # Getting elements from an API
 response = requests.get("https://kitsu.io/api/edge/manga?page[limit]=13&page[offset]=1200").json()["data"]
@@ -64,6 +64,7 @@ categorieList =  [
 categorie_collection.insert_many(categorieList)
 """
 
+
 def check_args():
     """
     Check wich arguments are present in the URL
@@ -99,6 +100,7 @@ def check_args():
 
     return args
 
+
 def check_args_value(args):
     """
     Check if the values of arguments are rights
@@ -132,6 +134,7 @@ def check_args_value(args):
         sort_right = check_sort_arg(args["sort"]["value"])
         args_value["sort_right"] = sort_right
     return args_value
+
 
 def check_sort_arg(sort_arg):
     """
@@ -227,13 +230,14 @@ def display_all_mangas():
         for manga in manga_collection.find().sort(args_values["sort_right"]["value"],
                                                   args_values["sort_right"]["order"]):
             list_mangas.append(manga)
-    else:
-        return "Erreur"
 
-    return \
-        {
-            "mangas": list_mangas
-        }
+    if list_mangas == []:
+        return "There is no mangas in this collection"
+    else:
+        return \
+            {
+                "mangas": list_mangas
+            }
 
 
 @app.route("/mangas", methods=["POST"])
@@ -275,6 +279,8 @@ def create_mangas():
     else:
         manga_collection.insert_one(manga)
         return "The manga has been successfully added"
+
+
 @app.route(f"/mangas/<id>", methods=["DELETE"])
 def delete_manga_list(id):
     """
@@ -321,3 +327,59 @@ def delete_manga_list(id):
             return f"le manga avec l'id {id_select} n'existe pas"
     else:
         return f"the method use is not good"
+
+
+@app.route("/mangas/category/<genre>", methods=["GET"])
+def display_mangas_by_category(genre):
+    """
+        Display all the mangas in one category from the database
+        Args:
+            "?order=":
+                alphabet(+/-),
+                date(+/-),
+                popularity(+/-)
+            "?sort=":
+                name,
+                year,
+                popularity,
+            "?paging=":
+                Number
+        :return:
+            Status 200,
+            mangas: [
+                {
+                    "id": Number,
+                    "name": String,
+                    "creation_date": String,
+                    "popular_rate": Float,
+                    "number_chapter": Number,
+                    "genres": String,
+                } ...
+            ]
+        error gestion:
+            Status 404:
+                {
+                    error_code: 404,
+                    message: No mangas founded.
+                }
+            Status 405:
+                {
+                    error_code: 405,,
+                    message: Not the right method maybe try another one.
+                }
+        """
+
+    list_mangas = []
+
+    for category in category_collection.find({},{"name": 1}):
+        if category["name"] == genre:
+            for manga in manga_collection.find({"genres": {"$eq": genre}}):
+                list_mangas.append(manga)
+        else:
+            return "This category does not exist"
+
+    return \
+        {
+            "mangas": list_mangas
+        }
+
