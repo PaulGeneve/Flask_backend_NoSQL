@@ -1,6 +1,8 @@
 import pymongo
 import requests
 import random
+import json
+
 from flask import Flask
 from flask import request
 
@@ -125,7 +127,7 @@ def check_args_value(args):
             "value": None,
             "order": 0
         }
-        }
+    }
     if args["sort"]["active"]:
         sort_right = check_sort_arg(args["sort"]["value"])
         args_value["sort_right"] = sort_right
@@ -150,9 +152,9 @@ def check_sort_arg(sort_arg):
     :return:
         The value if right or False
     """
-    if sort_arg == "name" :
+    if sort_arg == "name":
         return {
-            "value":sort_arg,
+            "value": sort_arg,
             "order": 1
         }
     elif sort_arg == "date":
@@ -263,6 +265,7 @@ def check_pagging_arg(pagging_arg):
 
 app = Flask(__name__)
 
+
 @app.route("/mangas", methods=["GET"])
 def display_all_mangas():
     """
@@ -328,3 +331,128 @@ def display_all_mangas():
         {
             "mangas": list_mangas
         }
+
+@app.route("/mangas", methods=["POST"])
+def create_mangas():
+    """
+    Add mangas in database
+    Args :
+        "id" : Number,
+        "name" : String,
+        "creation_date" : String,
+        "popular_rate" : Float,
+        "number_chapter" : String,
+    :return:
+        Status 200:
+            {
+                message : Manga has been successfully added
+            }
+
+    error gestion:
+        Status 400:
+            {
+                error_code: 400,
+                message: Not the right method
+            }
+        Status 404:
+            {
+                error_code: 409,
+                message : A file with the same "id" already exist
+    """
+
+    manga = json.loads(request.data.decode("utf-8"))
+    existing_id = False
+    for verify_id in db.mangas.find({}, {"_id": 1}):
+        if verify_id["_id"] == manga["_id"]:
+            existing_id = True
+
+    if existing_id:
+        return "A manga with this ID already exists"
+    else:
+        manga_collection.insert_one(manga)
+        return "The manga has been successfully added"
+
+@app.route(f"/mangas/<id>", methods=["DELETE"])
+def delete_manga_list(id):
+    """
+    Delete manga in the data base manga
+
+    Returns:
+        status 200: "the manga is delete",
+        manga[
+            {
+                "id": number
+            }
+        ]
+
+    :Error gestion:
+        Status 404:
+            {
+                error_code: 404,
+                message: "id manga is not valid"
+            }
+        Status 400:
+            {
+                error_code: 400,
+                message: "Not the right method maybe try another one"
+            },
+    """
+
+    print("old list")
+    for i in manga_collection.find()[:5]:
+        print(i)
+
+    id_select = int(id)
+
+    if requests.method == "DELETE":
+        if manga_collection.find({"id": f"{id_select}"}):
+
+            manga_collection.delete_one({'_id': id_select})
+            print("new list")
+
+            for i in manga_collection.find()[:5]:
+                print(i)
+
+            return f"le manga avec l'id {id_select} a été supprimé"
+        else:
+            return f"le manga avec l'id {id_select} n'existe pas"
+    else:
+        return f"the method use is not good",
+
+@app.route("/mangas/categorie/", methods=["GET"])
+def display_all_category():
+    """
+    Display all categoie's mangas from the database
+
+    :return:
+        Status 200,
+        categoies: [
+            {
+                "name": String,
+            } ...
+        ]
+    error gestion:
+        Status 404:
+            {
+                error_code: 404,
+                message: No categories founded.
+            }
+        Status 405:
+            {
+                error_code: 405,,
+                message: Not the right method maybe try another one.
+            }
+    """
+
+
+    list_categories = []
+    if categorie_collection.find():
+        for categories in categorie_collection.find():
+            list_categories.append(categories)
+    else:
+        return "error"
+    return \
+        {
+            "categories": list_categories
+        }
+
