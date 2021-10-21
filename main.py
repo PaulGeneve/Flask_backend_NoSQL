@@ -43,7 +43,7 @@ response = requests.get("https://kitsu.io/api/edge/manga?page[limit]=13&page[off
 
 # Adding documents to the differents categories
 """
-categorieList =  [
+categoryList =  [
     {
         "_id": 1,
         "name": "Shonen"
@@ -61,7 +61,7 @@ categorieList =  [
         "name": "Furyo"
     },
 ]
-categorie_collection.insert_many(categorieList)
+category_collection.insert_many(categoryList)
 """
 
 
@@ -133,6 +133,18 @@ def check_args_value(args):
     if args["sort"]["active"]:
         sort_right = check_sort_arg(args["sort"]["value"])
         args_value["sort_right"] = sort_right
+    if args["name"]["active"]:
+        name_right = check_name_arg(args["name"]["value"])
+        args_value["name_right"] = name_right
+    if args["year"]["active"]:
+        year_right = check_year_arg(args["year"]["value"])
+        args_value["year_right"] = year_right
+    if args["rating"]["active"]:
+        rating_right = check_rating_arg(args["rating"]["value"])
+        args_value["rating_right"] = rating_right
+    if args["pagging"]["active"]:
+        pagging_right = check_pagging_arg(args["pagging"]["value"])
+        args_value["pagging_right"] = pagging_right
     return args_value
 
 
@@ -176,7 +188,81 @@ def check_sort_arg(sort_arg):
     else:
         return {
             "value": False,
-            "order": -1
+            "order": 0
+        }
+
+def check_name_arg(name_arg):
+    """
+    Fonction to check if the value of name argument is a string
+    :param sort_arg: Value of of the sort argument
+    :return:
+        The value if right or False
+    """
+    digit = []
+    digit.append(any(c.isdigit() for c in name_arg))
+    if digit == [False]:
+        return {
+            "value":name_arg,
+            "order": 1
+        }
+    else:
+        return {
+            "value": False,
+            "order": 0
+        }
+
+def check_year_arg(year_arg):
+    """
+    Fonction to check if the value of year argument is a number
+    :param sort_arg: Value of of the sort argument
+    :return:
+        The value if right or False
+    """
+    if year_arg.isnumeric():
+        return {
+            "value":year_arg,
+            "order": 1
+        }
+    else:
+        return {
+            "value": False,
+            "order": 0
+        }
+
+def check_rating_arg(rating_arg):
+    """
+    Fonction to check if the value of rating argument is a number
+    :param sort_arg: Value of of the sort argument
+    :return:
+        The value if right or False
+    """
+    if rating_arg.isnumeric() and float(rating_arg) <= 5 and float(rating_arg) >= 0 and len(rating_arg) == 1:
+        return {
+            "value":rating_arg,
+            "order": 1
+        }
+    else:
+        return {
+            "value": False,
+            "order": 0
+        }
+
+def check_pagging_arg(pagging_arg):
+    """
+    Fonction to check if the value of pagging argument is a number
+    :param sort_arg: Value of of the sort argument
+    :return:
+        The value if right or False
+    """
+    if pagging_arg.isnumeric() and int(pagging_arg) > 0 and int(pagging_arg) <= manga_collection.count() :
+        return {
+            "value":pagging_arg,
+            "order": 1
+        }
+    else:
+        return {
+            "value": False,
+            "order": 0
         }
 
 
@@ -210,7 +296,7 @@ def display_all_mangas():
                 "genres": String,
             } ...
         ]
-    error gestion:
+    :error gestion:
         Status 404:
             {
                 error_code: 404,
@@ -230,6 +316,19 @@ def display_all_mangas():
         for manga in manga_collection.find().sort(args_values["sort_right"]["value"],
                                                   args_values["sort_right"]["order"]):
             list_mangas.append(manga)
+    elif args_values["name_right"]["value"] != None and args_values["name_right"]["value"] != False:
+        for manga in manga_collection.find({ "name": { "$regex": f"{args_values['name_right']['value']}"} }):
+            list_mangas.append(manga)
+    elif args_values["year_right"]["value"] != None and args_values["year_right"]["value"] != False:
+        for manga in manga_collection.find({"creation_date": {"$regex": f"{args_values['year_right']['value']}"}}):
+            list_mangas.append(manga)
+    elif args_values["rating_right"]["value"] != None and args_values["rating_right"]["value"] != False:
+        for manga in manga_collection.find():
+            if args_values["rating_right"]["value"] in str(manga["popular_rate"])[0]:
+                list_mangas.append(manga)
+    elif args_values["pagging_right"]["value"] != None and args_values["pagging_right"]["value"] != False:
+        for i in range(0 , int(args_values["pagging_right"]["value"])):
+            list_mangas.append(manga_collection.find()[i])
 
     if list_mangas == []:
         return "There is no mangas in this collection"
@@ -244,7 +343,7 @@ def display_all_mangas():
 def create_mangas():
     """
     Add mangas in database
-    Args :
+    :args:
         "id" : Number,
         "name" : String,
         "creation_date" : String,
@@ -256,7 +355,7 @@ def create_mangas():
                 message : Manga has been successfully added
             }
 
-    error gestion:
+    :error gestion:
         Status 400:
             {
                 error_code: 400,
@@ -282,11 +381,11 @@ def create_mangas():
 
 
 @app.route(f"/mangas/<id>", methods=["DELETE"])
-def delete_manga_list(id):
+def delete_manga(id):
     """
     Delete manga in the data base manga
 
-    Returns:
+    :returns:
         status 200: "the manga is delete",
         manga[
             {
@@ -294,7 +393,7 @@ def delete_manga_list(id):
             }
         ]
 
-    :Error gestion:
+    :error gestion:
         Status 404:
             {
                 error_code: 404,
@@ -383,3 +482,142 @@ def display_mangas_by_category(genre):
             "mangas": list_mangas
         }
 
+        return f"the method use is not good",
+
+
+@app.route("/mangas/<id>", methods=["PATCH"])
+def modify_manga(id):
+    """ Modify the information of a manga
+        :args:
+            id: number,
+            name: string,
+            category: string,
+            creation_date: string,
+            popular_rate: number,
+            number_chapter: number,
+        :return:
+                status 200:
+        {
+            message: "Le manga avec l'id {id} a bien été modifié"
+        },
+                mangas: [
+            {
+                "id": Number,
+                "name": String,
+                "creation_date": String,
+                "popular_rate": Float,
+                "number_chapter": Number,
+                "genres": String,
+            },
+        :error gestion:
+            Status 404: {
+                error_code: 404,
+                message: "Le manga avec l'id {id} n'existe pas".
+            }
+            Status 400:
+            {
+                error_code: 400,
+                message: "La méthode n'est pas bonne".
+            }
+
+    """
+
+    id_select = int(id)
+
+    if request.method == "PATCH":
+        if manga_collection.find({"id": f"{id_select}"}):
+            manga = json.loads(request.data.decode("utf-8"))
+            if manga != manga_collection:
+                manga_name = manga["name"]
+                manga_create_date = manga["creation_date"]
+                manga_popular_rate = manga["popular_rate"]
+                manga_number_chapter = manga["number_chapter"]
+                manga_genres = manga["genres"]
+                manga_collection.update_one({"_id": id_select}, {
+                    "$set": {"name": manga_name, "creation_date": manga_create_date, "popular_rate": manga_popular_rate,
+                             "number_chapter": manga_number_chapter, "genres": manga_genres}})
+
+                return f"Le manga avec l'id {id_select} a bien été modifié"
+            else:
+                return f"Le manga avec l'id {id_select} n'existe pas"
+        else:
+            return f"La méthode n'est pas bonne"
+
+
+@app.route("/mangas/categorie/", methods=["GET"])
+def display_all_category():
+    """
+    Display all categoie's mangas from the database
+    :return:
+        Status 200,
+        categoies: [
+            {
+                "name": String,
+            } ...
+        ]
+    :error gestion:
+        Status 404:
+            {
+                error_code: 404,
+                message: No categories founded.
+            }
+        Status 405:
+            {
+                error_code: 405,,
+                message: Not the right method maybe try another one.
+            }
+    """
+
+    list_categories = []
+    if categorie_collection.find():
+        for categories in categorie_collection.find():
+            list_categories.append(categories)
+    else:
+        return "error"
+    return \
+        {
+            "categories": list_categories
+        }
+
+
+@app.route("/mangas/catégorie/<categories>", methods=["GET"])
+def display_mangas_category():
+    """
+    Display all mangas of categories selected in the url
+    :arg:
+        "?order=":
+            alphabet(+/-),
+            date(+/-),
+            popularity(+/-)
+        "?sort=":
+            name,
+            year,
+            popularity,
+        "?paging=":
+            Number
+    :return:
+        Status 200,
+        mangas: [
+            {
+                "id": Number,
+                "name": String,
+                "creation_date": String,
+                "popular_rate": Float,
+                "number_chapter": Number,
+                "genres": String,
+            } ...
+        ]
+    :error gestion:
+        Status 404:
+            {
+                error_code: 404,
+                message: No mangas founded.
+            }
+        Status 405:
+            {
+                error_code: 405,,
+                message: Not the right method maybe try another one.
+            }
+    """
+    
+    return
