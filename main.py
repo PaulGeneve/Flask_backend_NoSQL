@@ -276,7 +276,7 @@ def create_mangas():
         return "The manga has been successfully added"
 
 @app.route(f"/mangas/<id>", methods=["DELETE"])
-def delete_manga_list(id):
+def delete_manga(id):
     """
     Delete manga in the data base manga
 
@@ -321,43 +321,6 @@ def delete_manga_list(id):
             return f"le manga avec l'id {id_select} n'existe pas"
     else:
         return f"the method use is not good",
-
-@app.route("/mangas/categorie/", methods=["GET"])
-def display_all_category():
-    """
-    Display all categoie's mangas from the database
-
-    :return:
-        Status 200,
-        categoies: [
-            {
-                "name": String,
-            } ...
-        ]
-    error gestion:
-        Status 404:
-            {
-                error_code: 404,
-                message: No categories founded.
-            }
-        Status 405:
-            {
-                error_code: 405,,
-                message: Not the right method maybe try another one.
-            }
-    """
-
-
-    list_categories = []
-    if categorie_collection.find():
-        for categories in categorie_collection.find():
-            list_categories.append(categories)
-    else:
-        return "error"
-    return \
-        {
-            "categories": list_categories
-        }
 
 @app.route("/mangas/<id>", methods=["PATCH"])
 def modify_manga(id):
@@ -414,3 +377,41 @@ def modify_manga(id):
                 return f"Le manga avec l'id {id_select} n'existe pas"
         else:
             return f"La méthode n'est pas bonne"
+
+@app.route("/mangas/categorie/", methods=["GET"])
+def display_all_category():
+    """
+    Display all categoie's mangas from the database
+
+    :return:
+        Status 200,
+        categoies: [
+            {
+                "name": String,
+            } ...
+        ]
+    error gestion:
+        Status 404:
+            {
+                error_code: 404,
+                message: No categories founded.
+            }
+        Status 405:
+            {
+                error_code: 405,,
+                message: Not the right method maybe try another one.
+            }
+    """
+
+
+    list_categories = []
+    if categorie_collection.find():
+        for categories in categorie_collection.find():
+            list_categories.append(categories)
+    else:
+        return "error"
+    return \
+        {
+            "categories": list_categories
+        }
+
