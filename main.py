@@ -64,6 +64,7 @@ categorieList =  [
 categorie_collection.insert_many(categorieList)
 """
 
+
 def check_args():
     """
     Check wich arguments are present in the URL
@@ -98,6 +99,7 @@ def check_args():
             args[f"{arg}"]["value"] = request.args.get(f"{arg}")
 
     return args
+
 
 def check_args_value(args):
     """
@@ -144,6 +146,7 @@ def check_args_value(args):
         pagging_right = check_pagging_arg(args["pagging"]["value"])
         args_value["pagging_right"] = pagging_right
     return args_value
+
 
 def check_sort_arg(sort_arg):
     """
@@ -293,7 +296,7 @@ def display_all_mangas():
                 "genres": String,
             } ...
         ]
-    error gestion:
+    :error gestion:
         Status 404:
             {
                 error_code: 404,
@@ -332,11 +335,12 @@ def display_all_mangas():
             "mangas": list_mangas
         }
 
+
 @app.route("/mangas", methods=["POST"])
 def create_mangas():
     """
     Add mangas in database
-    Args :
+    :args:
         "id" : Number,
         "name" : String,
         "creation_date" : String,
@@ -348,7 +352,7 @@ def create_mangas():
                 message : Manga has been successfully added
             }
 
-    error gestion:
+    :error gestion:
         Status 400:
             {
                 error_code: 400,
@@ -372,12 +376,13 @@ def create_mangas():
         manga_collection.insert_one(manga)
         return "The manga has been successfully added"
 
+
 @app.route(f"/mangas/<id>", methods=["DELETE"])
-def delete_manga_list(id):
+def delete_manga(id):
     """
     Delete manga in the data base manga
 
-    Returns:
+    :returns:
         status 200: "the manga is delete",
         manga[
             {
@@ -385,7 +390,7 @@ def delete_manga_list(id):
             }
         ]
 
-    :Error gestion:
+    :error gestion:
         Status 404:
             {
                 error_code: 404,
@@ -419,11 +424,70 @@ def delete_manga_list(id):
     else:
         return f"the method use is not good",
 
+
+@app.route("/mangas/<id>", methods=["PATCH"])
+def modify_manga(id):
+    """ Modify the information of a manga
+        :args:
+            id: number,
+            name: string,
+            category: string,
+            creation_date: string,
+            popular_rate: number,
+            number_chapter: number,
+        :return:
+                status 200:
+        {
+            message: "Le manga avec l'id {id} a bien été modifié"
+        },
+                mangas: [
+            {
+                "id": Number,
+                "name": String,
+                "creation_date": String,
+                "popular_rate": Float,
+                "number_chapter": Number,
+                "genres": String,
+            },
+        :error gestion:
+            Status 404: {
+                error_code: 404,
+                message: "Le manga avec l'id {id} n'existe pas".
+            }
+            Status 400:
+            {
+                error_code: 400,
+                message: "La méthode n'est pas bonne".
+            }
+
+    """
+
+    id_select = int(id)
+
+    if request.method == "PATCH":
+        if manga_collection.find({"id": f"{id_select}"}):
+            manga = json.loads(request.data.decode("utf-8"))
+            if manga != manga_collection:
+                manga_name = manga["name"]
+                manga_create_date = manga["creation_date"]
+                manga_popular_rate = manga["popular_rate"]
+                manga_number_chapter = manga["number_chapter"]
+                manga_genres = manga["genres"]
+                manga_collection.update_one({"_id": id_select}, {
+                    "$set": {"name": manga_name, "creation_date": manga_create_date, "popular_rate": manga_popular_rate,
+                             "number_chapter": manga_number_chapter, "genres": manga_genres}})
+
+                return f"Le manga avec l'id {id_select} a bien été modifié"
+            else:
+                return f"Le manga avec l'id {id_select} n'existe pas"
+        else:
+            return f"La méthode n'est pas bonne"
+
+
 @app.route("/mangas/categorie/", methods=["GET"])
 def display_all_category():
     """
     Display all categoie's mangas from the database
-
     :return:
         Status 200,
         categoies: [
@@ -431,7 +495,7 @@ def display_all_category():
                 "name": String,
             } ...
         ]
-    error gestion:
+    :error gestion:
         Status 404:
             {
                 error_code: 404,
@@ -444,7 +508,6 @@ def display_all_category():
             }
     """
 
-
     list_categories = []
     if categorie_collection.find():
         for categories in categorie_collection.find():
@@ -456,3 +519,45 @@ def display_all_category():
             "categories": list_categories
         }
 
+
+@app.route("/mangas/catégorie/<categories>", methods=["GET"])
+def display_mangas_category():
+    """
+    Display all mangas of categories selected in the url
+    :arg:
+        "?order=":
+            alphabet(+/-),
+            date(+/-),
+            popularity(+/-)
+        "?sort=":
+            name,
+            year,
+            popularity,
+        "?paging=":
+            Number
+    :return:
+        Status 200,
+        mangas: [
+            {
+                "id": Number,
+                "name": String,
+                "creation_date": String,
+                "popular_rate": Float,
+                "number_chapter": Number,
+                "genres": String,
+            } ...
+        ]
+    :error gestion:
+        Status 404:
+            {
+                error_code: 404,
+                message: No mangas founded.
+            }
+        Status 405:
+            {
+                error_code: 405,,
+                message: Not the right method maybe try another one.
+            }
+    """
+    
+    return
