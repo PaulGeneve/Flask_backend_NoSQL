@@ -125,7 +125,7 @@ def check_args_value(args):
             "value": None,
             "order": 0
         }
-        }
+    }
     if args["sort"]["active"]:
         sort_right = check_sort_arg(args["sort"]["value"])
         args_value["sort_right"] = sort_right
@@ -138,9 +138,9 @@ def check_sort_arg(sort_arg):
     :return:
         The value if right or False
     """
-    if sort_arg == "name" :
+    if sort_arg == "name":
         return {
-            "value":sort_arg,
+            "value": sort_arg,
             "order": 1
         }
     elif sort_arg == "date":
@@ -221,7 +221,8 @@ def display_all_mangas():
     args_values = check_args_value(args)
     print(args_values)
     if args_values["sort_right"]["value"] != None and args_values["sort_right"]["value"] != False:
-        for manga in manga_collection.find().sort(args_values["sort_right"]["value"], args_values["sort_right"]["order"]):
+        for manga in manga_collection.find().sort(args_values["sort_right"]["value"],
+                                                  args_values["sort_right"]["order"]):
             list_mangas.append(manga)
     else:
         return "Erreur"
@@ -230,3 +231,51 @@ def display_all_mangas():
         {
             "mangas": list_mangas
         }
+
+
+@app.route(f"/mangas/<id>", methods=["DELETE"])
+def delete_manga_list(id):
+    """
+    Delete manga in the data base manga
+
+    Returns:
+        status 200: "the manga is delete",
+        manga[
+            {
+                "id": number
+            }
+        ]
+
+    :Error gestion:
+        Status 404:
+            {
+                error_code: 404,
+                message: "id manga is not valid"
+            }
+        Status 400:
+            {
+                error_code: 400,
+                message: "Not the right method maybe try another one"
+            },
+    """
+
+    print("old list")
+    for i in manga_collection.find()[:5]:
+        print(i)
+
+    id_select = int(id)
+
+    if requests.method == "DELETE":
+        if manga_collection.find({"id": f"{id_select}"}):
+
+            manga_collection.delete_one({'_id': id_select})
+            print("new list")
+
+            for i in manga_collection.find()[:5]:
+                print(i)
+
+            return f"le manga avec l'id {id_select} a été supprimé"
+        else:
+            return f"le manga avec l'id {id_select} n'existe pas"
+    else:
+        return f"the method use is not good"
