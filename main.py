@@ -235,7 +235,6 @@ def display_all_mangas():
             "mangas": list_mangas
         }
 
-
 @app.route("/mangas", methods=["POST"])
 def create_mangas():
     """
@@ -275,6 +274,7 @@ def create_mangas():
     else:
         manga_collection.insert_one(manga)
         return "The manga has been successfully added"
+
 @app.route(f"/mangas/<id>", methods=["DELETE"])
 def delete_manga_list(id):
     """
@@ -320,4 +320,42 @@ def delete_manga_list(id):
         else:
             return f"le manga avec l'id {id_select} n'existe pas"
     else:
-        return f"the method use is not good"
+        return f"the method use is not good",
+
+@app.route("/mangas/categorie/", methods=["GET"])
+def display_all_category():
+    """
+    Display all categoie's mangas from the database
+
+    :return:
+        Status 200,
+        categoies: [
+            {
+                "name": String,
+            } ...
+        ]
+    error gestion:
+        Status 404:
+            {
+                error_code: 404,
+                message: No categories founded.
+            }
+        Status 405:
+            {
+                error_code: 405,,
+                message: Not the right method maybe try another one.
+            }
+    """
+
+
+    list_categories = []
+    if categorie_collection.find():
+        for categories in categorie_collection.find():
+            list_categories.append(categories)
+    else:
+        return "error"
+    return \
+        {
+            "categories": list_categories
+        }
+
