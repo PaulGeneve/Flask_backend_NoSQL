@@ -359,3 +359,58 @@ def display_all_category():
             "categories": list_categories
         }
 
+@app.route("/mangas/<id>", methods=["PATCH"])
+def modify_manga(id):
+    """ Modify the information of a manga
+        args
+            id: number,
+            name: string,
+            category: string,
+            creation_date: string,
+            popular_rate: number,
+            number_chapter: number,
+        :return:
+                status 200:
+        {
+            message: "Le manga avec l'id {id} a bien été modifié"
+        },
+                mangas: [
+            {
+                "id": Number,
+                "name": String,
+                "creation_date": String,
+                "popular_rate": Float,
+                "number_chapter": Number,
+                "genres": String,
+            },
+        error gestion:
+                    {
+                error_code: 404,
+                message: "Le manga avec l'id {id} n'existe pas".
+            }
+        Status 400:
+            {
+                error_code: 400,
+                message: "La méthode n'est pas bonne".
+            }
+
+    """
+
+    id_select = int(id)
+
+    if request.method == "PATCH":
+        if manga_collection.find({"id": f"{id_select}"}):
+            manga = json.loads(request.data.decode("utf-8"))
+            if manga != manga_collection:
+                manga_name = manga["name"]
+                manga_create_date = manga["creation_date"]
+                manga_popular_rate = manga["popular_rate"]
+                manga_number_chapter = manga["number_chapter"]
+                manga_genres = manga["genres"]
+                manga_collection.update_one({"_id": id_select}, {"$set": {"name": manga_name, "creation_date": manga_create_date, "popular_rate": manga_popular_rate, "number_chapter": manga_number_chapter, "genres": manga_genres}})
+
+                return f"Le manga avec l'id {id_select} a bien été modifié"
+            else:
+                return f"Le manga avec l'id {id_select} n'existe pas"
+        else:
+            return f"La méthode n'est pas bonne"
