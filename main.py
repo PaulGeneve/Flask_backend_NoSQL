@@ -546,8 +546,6 @@ def display_mangas_by_category(genre):
     else:
         return "This category does not exist"
 
-    return f"the method use is not good",
-
 
 @app.route("/mangas/<id>", methods=["PATCH"])
 def modify_manga(id):
