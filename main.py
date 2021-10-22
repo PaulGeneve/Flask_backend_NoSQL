@@ -502,7 +502,7 @@ def modify_manga(id):
         :return:
                 status 200:
         {
-            message: "Le manga avec l'id {id} a bien été modifié"
+            message: "The manga with id: {id_select} has been modified"
         },
                 mangas: [
             {
@@ -516,12 +516,12 @@ def modify_manga(id):
         :error gestion:
             Status 404: {
                 error_code: 404,
-                message: "Le manga avec l'id {id} n'existe pas".
+                message: "The manga with id: {id_select} doesn't exist".
             }
             Status 400:
             {
                 error_code: 400,
-                message: "La méthode n'est pas bonne".
+                message: "The method is not right".
             }
 
     """
@@ -546,10 +546,10 @@ def modify_manga(id):
                          "number_chapter": manga_number_chapter, "genres": manga_genres}})
 
             # status 200  with message
-            return f"Le manga avec l'id {id_select} a bien été modifié"
+            return f"The manga with id: {id_select} has been modified"
     else:
         # status 404 with message
-        return f"Le manga avec l'id {id_select} n'existe pas"
+        return f"The manga with id: {id_select} doesn't exist"
 
 
 @app.route("/mangas/category/", methods=["GET"])
