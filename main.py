@@ -271,10 +271,9 @@ def check_page_arg(page_arg):
         The value if right or False
     """
     # Check if the parameter is a number > 0 and < to the length of the data collection
-    print(int(math.ceil(manga_collection.count() / 10)))
-    if page_arg.isnumeric() and int(page_arg) > 0 and int(page_arg) <= int(math.ceil(manga_collection.count() / 10)) :
+    if page_arg.isnumeric() and int(page_arg) > 0 and int(page_arg) <= int(math.ceil(manga_collection.count() / 10)):
         return {
-            "value":page_arg,
+            "value": page_arg,
             "order": 1
         }
     else:
@@ -501,28 +500,9 @@ def display_mangas_by_category(genre):
         """
 
     list_mangas = []
-
+    page = 1
     args = check_args()
     args_values = check_args_value(args)
-    print(args_values)
-    if args_values["sort_right"]["value"] != None and args_values["sort_right"]["value"] != False:
-        for manga in manga_collection.find().sort(args_values["sort_right"]["value"],
-                                                  args_values["sort_right"]["order"]):
-            list_mangas.append(manga)
-    elif args_values["name_right"]["value"] != None and args_values["name_right"]["value"] != False:
-        for manga in manga_collection.find({"name": {"$regex": f"{args_values['name_right']['value']}"}}):
-            list_mangas.append(manga)
-    elif args_values["year_right"]["value"] != None and args_values["year_right"]["value"] != False:
-        for manga in manga_collection.find({"creation_date": {"$regex": f"{args_values['year_right']['value']}"}}):
-            list_mangas.append(manga)
-    elif args_values["rating_right"]["value"] != None and args_values["rating_right"]["value"] != False:
-        for manga in manga_collection.find():
-            if args_values["rating_right"]["value"] in str(manga["popular_rate"])[0]:
-                list_mangas.append(manga)
-    elif args_values["pagging_right"]["value"] != None and args_values["pagging_right"]["value"] != False:
-        for i in range(0, int(args_values["pagging_right"]["value"])):
-            list_mangas.append(manga_collection.find()[i])
-
 
     category_exist = False
 
@@ -535,13 +515,37 @@ def display_mangas_by_category(genre):
 
     # If the variable is true then we enter in other loop else we return an error message
     if category_exist == True:
-
         # Search the manga in our collections where genre is equal to the genre asked, we fill a list with these genre and we return the list to show them
-        for manga in manga_collection.find({"genres": {"$eq": genre}}):
-            list_mangas.append(manga)
+        # Check if sort is write and then add with the sort parameter
+        if args_values["sort_right"]["value"] != None and args_values["sort_right"]["value"] != False:
+            for manga in manga_collection.find({"genres": {"$eq": genre}}).sort(args_values["sort_right"]["value"],
+                                                      args_values["sort_right"]["order"]):
+                list_mangas.append(manga)
+        # Check if the name is write and then add with the filter
+        elif args_values["name_right"]["value"] != None and args_values["name_right"]["value"] != False:
+            for manga in manga_collection.find({"name": {"$regex": f"{args_values['name_right']['value']}"}, "genres": {"$eq": genre}}):
+                list_mangas.append(manga)
+        # Check if the year is write and then add with the filter
+        elif args_values["year_right"]["value"] != None and args_values["year_right"]["value"] != False:
+            for manga in manga_collection.find({"creation_date": {"$regex": f"{args_values['year_right']['value']}"}, "genres": {"$eq": genre}}):
+                list_mangas.append(manga)
+        # Check if the rating is write and then add with the filter
+        elif args_values["rating_right"]["value"] != None and args_values["rating_right"]["value"] != False:
+            for manga in manga_collection.find({"genres": {"$eq": genre}}):
+                if args_values["rating_right"]["value"] in str(manga["popular_rate"])[0]:
+                    list_mangas.append(manga)
+        else:
+            for manga in manga_collection.find({"genres": {"$eq": genre}}):
+                list_mangas.append(manga)
+
+        # Check if the pagging is write and then add with the things
+        if args_values["page_right"]["value"] != None and args_values["page_right"]["value"] != False:
+            page = int(args_values["page_right"]["value"])
+
+        list_mangas_print = np.array(list_mangas)
         return \
             {
-                "mangas": list_mangas
+                "mangas": list_mangas_print[0 + ((page - 1) * 10):page * 10].tolist()
             }
     else:
         return "This category does not exist"
@@ -651,5 +655,3 @@ def display_all_category():
         {
             "categories": list_categories
         }
-
-
