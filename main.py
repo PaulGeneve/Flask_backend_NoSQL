@@ -478,6 +478,29 @@ def display_mangas_by_category(genre):
         """
 
     list_mangas = []
+
+    args = check_args()
+    args_values = check_args_value(args)
+    print(args_values)
+    if args_values["sort_right"]["value"] != None and args_values["sort_right"]["value"] != False:
+        for manga in manga_collection.find().sort(args_values["sort_right"]["value"],
+                                                  args_values["sort_right"]["order"]):
+            list_mangas.append(manga)
+    elif args_values["name_right"]["value"] != None and args_values["name_right"]["value"] != False:
+        for manga in manga_collection.find({"name": {"$regex": f"{args_values['name_right']['value']}"}}):
+            list_mangas.append(manga)
+    elif args_values["year_right"]["value"] != None and args_values["year_right"]["value"] != False:
+        for manga in manga_collection.find({"creation_date": {"$regex": f"{args_values['year_right']['value']}"}}):
+            list_mangas.append(manga)
+    elif args_values["rating_right"]["value"] != None and args_values["rating_right"]["value"] != False:
+        for manga in manga_collection.find():
+            if args_values["rating_right"]["value"] in str(manga["popular_rate"])[0]:
+                list_mangas.append(manga)
+    elif args_values["pagging_right"]["value"] != None and args_values["pagging_right"]["value"] != False:
+        for i in range(0, int(args_values["pagging_right"]["value"])):
+            list_mangas.append(manga_collection.find()[i])
+
+
     category_exist = False
 
     # Search in all the category that exist in our collection
@@ -487,7 +510,7 @@ def display_mangas_by_category(genre):
         if category["name"] == genre:
             category_exist = True
 
-    # If the variable is true then we enter in other loop else we return an error message 
+    # If the variable is true then we enter in other loop else we return an error message
     if category_exist == True:
 
         # Search the manga in our collections where genre is equal to the genre asked, we fill a list with these genre and we return the list to show them
