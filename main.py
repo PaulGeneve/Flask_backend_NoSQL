@@ -2,6 +2,8 @@ import pymongo
 import requests
 import random
 import json
+import numpy as np
+import math
 
 from flask import Flask
 from flask import request
@@ -67,9 +69,9 @@ category_collection.insert_many(categoryList)
 
 def check_args():
     """
-    Check wich arguments are present in the URL
+    Check wich parameters are present in the URL
     :return:
-        A dict of arguments with a key if they are present and a key with their values
+        A dict of parameters with a key if they are present and a key with their values
     """
     args = {
         "sort": {
@@ -88,11 +90,12 @@ def check_args():
             "active": False,
             "value": None
         },
-        "pagging": {
+        "page": {
             "active": False,
             "value": None
         },
     }
+    # For all parameters, check wich are in the request
     for arg in args:
         if request.args.get(f"{arg}") != None:
             args[f"{arg}"]["active"] = True
@@ -103,10 +106,10 @@ def check_args():
 
 def check_args_value(args):
     """
-    Check if the values of arguments are rights
+    Check if the values of parameters are rights
     :param args: dict of arguments with their values and if they are active
     :return:
-        A dict with the arguments that are right
+        A dict with the parameter that are right
     """
     args_value = {
         "sort_right": {
@@ -125,26 +128,31 @@ def check_args_value(args):
             "value": None,
             "order": 0
         },
-        "pagging_right": {
+        "page_right": {
             "value": None,
             "order": 0
         }
     }
+    # If sort is active, check if the value is right
     if args["sort"]["active"]:
         sort_right = check_sort_arg(args["sort"]["value"])
         args_value["sort_right"] = sort_right
+    # If name is active, check if the value is right
     if args["name"]["active"]:
         name_right = check_name_arg(args["name"]["value"])
         args_value["name_right"] = name_right
+    # If year is active, check if the value is right
     if args["year"]["active"]:
         year_right = check_year_arg(args["year"]["value"])
         args_value["year_right"] = year_right
+    # If rating is active, check if the value is right
     if args["rating"]["active"]:
         rating_right = check_rating_arg(args["rating"]["value"])
         args_value["rating_right"] = rating_right
-    if args["pagging"]["active"]:
-        pagging_right = check_pagging_arg(args["pagging"]["value"])
-        args_value["pagging_right"] = pagging_right
+    # If pagging is active, check if the value is right
+    if args["page"]["active"]:
+        page_right = check_page_arg(args["page"]["value"])
+        args_value["page_right"] = page_right
     return args_value
 
 
@@ -155,6 +163,7 @@ def check_sort_arg(sort_arg):
     :return:
         The value if right or False
     """
+    # Check if the parameter value is existing and if he is ascending or descending
     if sort_arg == "name":
         return {
             "value": sort_arg,
@@ -199,6 +208,7 @@ def check_name_arg(name_arg):
     :return:
         The value if right or False
     """
+    # Check if the parameter is not a number
     digit = []
     digit.append(any(c.isdigit() for c in name_arg))
     if digit == [False]:
@@ -220,6 +230,7 @@ def check_year_arg(year_arg):
     :return:
         The value if right or False
     """
+    # Check if the parameter is a number
     if year_arg.isnumeric():
         return {
             "value": year_arg,
@@ -239,6 +250,7 @@ def check_rating_arg(rating_arg):
     :return:
         The value if right or False
     """
+    # Check if the parameter is a number an if it is between 0 and 5
     if rating_arg.isnumeric() and float(rating_arg) <= 5 and float(rating_arg) >= 0 and len(rating_arg) == 1:
         return {
             "value": rating_arg,
@@ -251,16 +263,18 @@ def check_rating_arg(rating_arg):
         }
 
 
-def check_pagging_arg(pagging_arg):
+def check_page_arg(page_arg):
     """
     Fonction to check if the value of pagging argument is a number
     :param sort_arg: Value of of the sort argument
     :return:
         The value if right or False
     """
-    if pagging_arg.isnumeric() and int(pagging_arg) > 0 and int(pagging_arg) <= manga_collection.count():
+    # Check if the parameter is a number > 0 and < to the length of the data collection
+    print(int(math.ceil(manga_collection.count() / 10)))
+    if page_arg.isnumeric() and int(page_arg) > 0 and int(page_arg) <= int(math.ceil(manga_collection.count() / 10)) :
         return {
-            "value": pagging_arg,
+            "value":page_arg,
             "order": 1
         }
     else:
@@ -313,33 +327,42 @@ def display_all_mangas():
             }
     """
     list_mangas = []
+    page = 1
     args = check_args()
     args_values = check_args_value(args)
-    print(args_values)
+    # Check if sort is write and then add with the sort parameter
     if args_values["sort_right"]["value"] != None and args_values["sort_right"]["value"] != False:
         for manga in manga_collection.find().sort(args_values["sort_right"]["value"],
                                                   args_values["sort_right"]["order"]):
             list_mangas.append(manga)
+    # Check if the name is write and then add with the filter
     elif args_values["name_right"]["value"] != None and args_values["name_right"]["value"] != False:
         for manga in manga_collection.find({"name": {"$regex": f"{args_values['name_right']['value']}"}}):
             list_mangas.append(manga)
+    # Check if the year is write and then add with the filter
     elif args_values["year_right"]["value"] != None and args_values["year_right"]["value"] != False:
         for manga in manga_collection.find({"creation_date": {"$regex": f"{args_values['year_right']['value']}"}}):
             list_mangas.append(manga)
+    # Check if the rating is write and then add with the filter
     elif args_values["rating_right"]["value"] != None and args_values["rating_right"]["value"] != False:
         for manga in manga_collection.find():
             if args_values["rating_right"]["value"] in str(manga["popular_rate"])[0]:
                 list_mangas.append(manga)
-    elif args_values["pagging_right"]["value"] != None and args_values["pagging_right"]["value"] != False:
-        for i in range(0, int(args_values["pagging_right"]["value"])):
-            list_mangas.append(manga_collection.find()[i])
+    else:
+        for manga in manga_collection.find():
+            list_mangas.append(manga)
 
+    # Check if the pagging is write and then add with the things
+    if args_values["page_right"]["value"] != None and args_values["page_right"]["value"] != False:
+        page = int(args_values["page_right"]["value"])
+
+    list_mangas_print = np.array(list_mangas)
     if list_mangas == []:
         return "There is no mangas in this collection"
     else:
         return \
             {
-                "mangas": list_mangas
+                "mangas": list_mangas_print[0 + ((page - 1) * 10):page * 10].tolist()
             }
 
 
@@ -564,24 +587,33 @@ def modify_manga(id):
     """
 
     id_select = int(id)
-
+    # if the request method is PATCH
     if request.method == "PATCH":
+        # if the requested id is found
         if manga_collection.find({"id": f"{id_select}"}):
+            # return a json with the new values of a manga
             manga = json.loads(request.data.decode("utf-8"))
+            # compare the modifications with existing values
             if manga != manga_collection:
                 manga_name = manga["name"]
                 manga_create_date = manga["creation_date"]
                 manga_popular_rate = manga["popular_rate"]
                 manga_number_chapter = manga["number_chapter"]
                 manga_genres = manga["genres"]
+                # update the database with the new values using the update_one() method
+                # The first parameter is a query object defining which document to update : id
+                # The second parameter is an object defining the new values of the document : new values
                 manga_collection.update_one({"_id": id_select}, {
                     "$set": {"name": manga_name, "creation_date": manga_create_date, "popular_rate": manga_popular_rate,
                              "number_chapter": manga_number_chapter, "genres": manga_genres}})
 
+                # status 200  with message
                 return f"Le manga avec l'id {id_select} a bien été modifié"
             else:
+                # status 404 with message
                 return f"Le manga avec l'id {id_select} n'existe pas"
         else:
+            # status 400 with message
             return f"La méthode n'est pas bonne"
 
 
