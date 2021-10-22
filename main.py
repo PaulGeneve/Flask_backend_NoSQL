@@ -16,57 +16,6 @@ db = client.mangaDB
 manga_collection = db.mangas
 category_collection = db.categories
 
-# Getting elements from an API
-response = requests.get("https://kitsu.io/api/edge/manga?page[limit]=13&page[offset]=1200").json()["data"]
-
-# Doing a loop to push them in our database
-"""
-    for i in range(0,13):
-    chapter_count = int
-    rating = float
-    if response[i]["attributes"]["averageRating"] != None:
-        rating = round(float(response[i]["attributes"]["averageRating"]) / 20, 2)
-    else:
-        rating = round(random.uniform(0.0, 5.0), 2)
-    if response[i]["attributes"]["chapterCount"] != None:
-        chapter_count = int(response[i]["attributes"]["chapterCount"])
-    else:
-        chapter_count = random.randrange(50, 200)
-    manga = {
-        "_id": int(response[i]["id"]),
-        "name": response[i]["attributes"]["titles"]["en_jp"],
-        "creation_date": response[i]["attributes"]["startDate"],
-        "popular_rate": rating,
-        "number_chapter": chapter_count,
-        "genres": "Furyo"
-    }
-    manga_collection.insert_one(manga)
-"""
-
-# Adding documents to the differents categories
-"""
-categoryList =  [
-    {
-        "_id": 1,
-        "name": "Shonen"
-    },
-    {
-        "_id": 2,
-        "name": "Seinen"
-    },
-    {
-        "_id": 3,
-        "name": "Josei"
-    },
-    {
-        "_id": 4,
-        "name": "Furyo"
-    },
-]
-category_collection.insert_many(categoryList)
-"""
-
-
 def check_args():
     """
     Check wich parameters are present in the URL
@@ -437,26 +386,15 @@ def delete_manga(id):
             },
     """
 
-    print("old list")
-    for i in manga_collection.find()[:5]:
-        print(i)
-
     id_select = int(id)
 
-    if requests.method == "DELETE":
-        if manga_collection.find({"id": f"{id_select}"}):
+    # if id of manga exist delete manga else return an error
+    if  manga_collection.find_one({"_id": {"$eq": id_select }}) != None:
+        manga_collection.delete_one({'_id': id_select})
 
-            manga_collection.delete_one({'_id': id_select})
-            print("new list")
-
-            for i in manga_collection.find()[:5]:
-                print(i)
-
-            return f"le manga avec l'id {id_select} a été supprimé"
-        else:
-            return f"le manga avec l'id {id_select} n'existe pas"
+        return f"manga with id:{id_select} has been deleted"
     else:
-        return f"the method use is not good"
+        return f"manga with id: {id_select} doesn't exist"
 
 
 @app.route("/mangas/category/<genre>", methods=["GET"])
@@ -589,37 +527,32 @@ def modify_manga(id):
     """
 
     id_select = int(id)
-    # if the request method is PATCH
-    if request.method == "PATCH":
-        # if the requested id is found
-        if manga_collection.find({"id": f"{id_select}"}):
-            # return a json with the new values of a manga
-            manga = json.loads(request.data.decode("utf-8"))
-            # compare the modifications with existing values
-            if manga != manga_collection:
-                manga_name = manga["name"]
-                manga_create_date = manga["creation_date"]
-                manga_popular_rate = manga["popular_rate"]
-                manga_number_chapter = manga["number_chapter"]
-                manga_genres = manga["genres"]
-                # update the database with the new values using the update_one() method
-                # The first parameter is a query object defining which document to update : id
-                # The second parameter is an object defining the new values of the document : new values
-                manga_collection.update_one({"_id": id_select}, {
-                    "$set": {"name": manga_name, "creation_date": manga_create_date, "popular_rate": manga_popular_rate,
-                             "number_chapter": manga_number_chapter, "genres": manga_genres}})
+    # if the requested id is found
+    if manga_collection.find_one({"_id": {"$eq": id_select }}) != None:
+        # return a json with the new values of a manga
+        manga = json.loads(request.data.decode("utf-8"))
+        # compare the modifications with existing values
+        if manga != manga_collection:
+            manga_name = manga["name"]
+            manga_create_date = manga["creation_date"]
+            manga_popular_rate = manga["popular_rate"]
+            manga_number_chapter = manga["number_chapter"]
+            manga_genres = manga["genres"]
+            # update the database with the new values using the update_one() method
+            # The first parameter is a query object defining which document to update : id
+            # The second parameter is an object defining the new values of the document : new values
+            manga_collection.update_one({"_id": id_select}, {
+                "$set": {"name": manga_name, "creation_date": manga_create_date, "popular_rate": manga_popular_rate,
+                         "number_chapter": manga_number_chapter, "genres": manga_genres}})
 
-                # status 200  with message
-                return f"Le manga avec l'id {id_select} a bien été modifié"
-            else:
-                # status 404 with message
-                return f"Le manga avec l'id {id_select} n'existe pas"
-        else:
-            # status 400 with message
-            return f"La méthode n'est pas bonne"
+            # status 200  with message
+            return f"Le manga avec l'id {id_select} a bien été modifié"
+    else:
+        # status 404 with message
+        return f"Le manga avec l'id {id_select} n'existe pas"
 
 
-@app.route("/mangas/categorie/", methods=["GET"])
+@app.route("/mangas/category/", methods=["GET"])
 def display_all_category():
     """
     Display all categoie's mangas from the database
@@ -644,11 +577,13 @@ def display_all_category():
     """
 
     list_categories = []
-    if category_collection.find():
+
+    # if categories exists foreach categories then push it in array 'list_categories' and display this array else return error
+    if category_collection.find() != None:
         for categories in category_collection.find():
             list_categories.append(categories)
     else:
-        return "error"
+        return "error no category existing"
     return \
         {
             "categories": list_categories
