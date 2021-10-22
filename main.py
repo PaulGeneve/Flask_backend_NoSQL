@@ -14,7 +14,7 @@ client = pymongo.MongoClient(
     f"mongodb+srv://{user_name}:{password}@cluster0.rz1pu.mongodb.net/myFirstDatabase?retryWrites=true&w=majority&ssl=true&ssl_cert_reqs=CERT_NONE")
 db = client.mangaDB
 manga_collection = db.mangas
-categorie_collection = db.categories
+category_collection = db.categories
 
 # Getting elements from an API
 response = requests.get("https://kitsu.io/api/edge/manga?page[limit]=13&page[offset]=1200").json()["data"]
@@ -200,6 +200,7 @@ def check_sort_arg(sort_arg):
             "order": 0
         }
 
+
 def check_name_arg(name_arg):
     """
     Fonction to check if the value of name argument is a string
@@ -212,7 +213,7 @@ def check_name_arg(name_arg):
     digit.append(any(c.isdigit() for c in name_arg))
     if digit == [False]:
         return {
-            "value":name_arg,
+            "value": name_arg,
             "order": 1
         }
     else:
@@ -220,6 +221,7 @@ def check_name_arg(name_arg):
             "value": False,
             "order": 0
         }
+
 
 def check_year_arg(year_arg):
     """
@@ -231,7 +233,7 @@ def check_year_arg(year_arg):
     # Check if the parameter is a number
     if year_arg.isnumeric():
         return {
-            "value":year_arg,
+            "value": year_arg,
             "order": 1
         }
     else:
@@ -239,6 +241,7 @@ def check_year_arg(year_arg):
             "value": False,
             "order": 0
         }
+
 
 def check_rating_arg(rating_arg):
     """
@@ -250,7 +253,7 @@ def check_rating_arg(rating_arg):
     # Check if the parameter is a number an if it is between 0 and 5
     if rating_arg.isnumeric() and float(rating_arg) <= 5 and float(rating_arg) >= 0 and len(rating_arg) == 1:
         return {
-            "value":rating_arg,
+            "value": rating_arg,
             "order": 1
         }
     else:
@@ -258,6 +261,7 @@ def check_rating_arg(rating_arg):
             "value": False,
             "order": 0
         }
+
 
 def check_page_arg(page_arg):
     """
@@ -333,7 +337,7 @@ def display_all_mangas():
             list_mangas.append(manga)
     # Check if the name is write and then add with the filter
     elif args_values["name_right"]["value"] != None and args_values["name_right"]["value"] != False:
-        for manga in manga_collection.find({ "name": { "$regex": f"{args_values['name_right']['value']}"} }):
+        for manga in manga_collection.find({"name": {"$regex": f"{args_values['name_right']['value']}"}}):
             list_mangas.append(manga)
     # Check if the year is write and then add with the filter
     elif args_values["year_right"]["value"] != None and args_values["year_right"]["value"] != False:
@@ -353,10 +357,13 @@ def display_all_mangas():
         page = int(args_values["page_right"]["value"])
 
     list_mangas_print = np.array(list_mangas)
-    return \
-        {
-            "mangas": list_mangas_print[0+((page-1)*10):page*10].tolist()
-        }
+    if list_mangas == []:
+        return "There is no mangas in this collection"
+    else:
+        return \
+            {
+                "mangas": list_mangas_print[0 + ((page - 1) * 10):page * 10].tolist()
+            }
 
 
 @app.route("/mangas", methods=["POST"])
@@ -389,10 +396,15 @@ def create_mangas():
 
     manga = json.loads(request.data.decode("utf-8"))
     existing_id = False
+
+    # Check if the Id we are trying to create does not already exist
     for verify_id in db.mangas.find({}, {"_id": 1}):
+
+        # If the Id we are trying to create already exist, the variable changes to True
         if verify_id["_id"] == manga["_id"]:
             existing_id = True
 
+    # If the variable is True then he return an error message else we had the new Id in our Collection with an succes message
     if existing_id:
         return "A manga with this ID already exists"
     else:
@@ -445,7 +457,73 @@ def delete_manga(id):
         else:
             return f"le manga avec l'id {id_select} n'existe pas"
     else:
-        return f"the method use is not good",
+        return f"the method use is not good"
+
+
+@app.route("/mangas/category/<genre>", methods=["GET"])
+def display_mangas_by_category(genre):
+    """
+        Display all the mangas in one category from the database
+        Args:
+            "?order=":
+                alphabet(+/-),
+                date(+/-),
+                popularity(+/-)
+            "?sort=":
+                name,
+                year,
+                popularity,
+            "?paging=":
+                Number
+        :return:
+            Status 200,
+            mangas: [
+                {
+                    "id": Number,
+                    "name": String,
+                    "creation_date": String,
+                    "popular_rate": Float,
+                    "number_chapter": Number,
+                    "genres": String,
+                } ...
+            ]
+        error gestion:
+            Status 404:
+                {
+                    error_code: 404,
+                    message: No mangas founded.
+                }
+            Status 405:
+                {
+                    error_code: 405,,
+                    message: Not the right method maybe try another one.
+                }
+        """
+
+    list_mangas = []
+    category_exist = False
+
+    # Search in all the category that exist in our collection
+    for category in category_collection.find({}, {"name": 1}):
+
+        # Check if one of these category is equal to one asked and if yes, our variable changes to true
+        if category["name"] == genre:
+            category_exist = True
+
+    # If the variable is true then we enter in other loop else we return an error message
+    if category_exist == True:
+
+        # Search the manga in our collections where genre is equal to the genre asked, we fill a list with these genre and we return the list to show them
+        for manga in manga_collection.find({"genres": {"$eq": genre}}):
+            list_mangas.append(manga)
+        return \
+            {
+                "mangas": list_mangas
+            }
+    else:
+        return "This category does not exist"
+
+    return f"the method use is not good",
 
 
 @app.route("/mangas/<id>", methods=["PATCH"])
@@ -486,24 +564,33 @@ def modify_manga(id):
     """
 
     id_select = int(id)
-
+    # if the request method is PATCH
     if request.method == "PATCH":
+        # if the requested id is found
         if manga_collection.find({"id": f"{id_select}"}):
+            # return a json with the new values of a manga
             manga = json.loads(request.data.decode("utf-8"))
+            # compare the modifications with existing values
             if manga != manga_collection:
                 manga_name = manga["name"]
                 manga_create_date = manga["creation_date"]
                 manga_popular_rate = manga["popular_rate"]
                 manga_number_chapter = manga["number_chapter"]
                 manga_genres = manga["genres"]
+                # update the database with the new values using the update_one() method
+                # The first parameter is a query object defining which document to update : id
+                # The second parameter is an object defining the new values of the document : new values
                 manga_collection.update_one({"_id": id_select}, {
                     "$set": {"name": manga_name, "creation_date": manga_create_date, "popular_rate": manga_popular_rate,
                              "number_chapter": manga_number_chapter, "genres": manga_genres}})
 
+                # status 200  with message
                 return f"Le manga avec l'id {id_select} a bien été modifié"
             else:
+                # status 404 with message
                 return f"Le manga avec l'id {id_select} n'existe pas"
         else:
+            # status 400 with message
             return f"La méthode n'est pas bonne"
 
 
@@ -532,8 +619,8 @@ def display_all_category():
     """
 
     list_categories = []
-    if categorie_collection.find():
-        for categories in categorie_collection.find():
+    if category_collection.find():
+        for categories in category_collection.find():
             list_categories.append(categories)
     else:
         return "error"
@@ -541,3 +628,5 @@ def display_all_category():
         {
             "categories": list_categories
         }
+
+
