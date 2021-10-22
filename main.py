@@ -204,7 +204,7 @@ def check_sort_arg(sort_arg):
 def check_name_arg(name_arg):
     """
     Fonction to check if the value of name argument is a string
-    :param sort_arg: Value of of the sort argument
+    :param name_arg: Value of of the sort argument
     :return:
         The value if right or False
     """
@@ -226,7 +226,7 @@ def check_name_arg(name_arg):
 def check_year_arg(year_arg):
     """
     Fonction to check if the value of year argument is a number
-    :param sort_arg: Value of of the sort argument
+    :param year_arg: Value of of the sort argument
     :return:
         The value if right or False
     """
@@ -246,7 +246,7 @@ def check_year_arg(year_arg):
 def check_rating_arg(rating_arg):
     """
     Fonction to check if the value of rating argument is a number
-    :param sort_arg: Value of of the sort argument
+    :param rating_arg: Value of of the sort argument
     :return:
         The value if right or False
     """
