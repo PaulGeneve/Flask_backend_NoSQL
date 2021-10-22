@@ -541,24 +541,33 @@ def modify_manga(id):
     """
 
     id_select = int(id)
-
+    # if the request method is PATCH
     if request.method == "PATCH":
+        # if the requested id is found
         if manga_collection.find({"id": f"{id_select}"}):
+            # return a json with the new values of a manga
             manga = json.loads(request.data.decode("utf-8"))
+            # compare the modifications with existing values
             if manga != manga_collection:
                 manga_name = manga["name"]
                 manga_create_date = manga["creation_date"]
                 manga_popular_rate = manga["popular_rate"]
                 manga_number_chapter = manga["number_chapter"]
                 manga_genres = manga["genres"]
+                # update the database with the new values using the update_one() method
+                # The first parameter is a query object defining which document to update : id
+                # The second parameter is an object defining the new values of the document : new values
                 manga_collection.update_one({"_id": id_select}, {
                     "$set": {"name": manga_name, "creation_date": manga_create_date, "popular_rate": manga_popular_rate,
                              "number_chapter": manga_number_chapter, "genres": manga_genres}})
 
+                # status 200  with message
                 return f"Le manga avec l'id {id_select} a bien été modifié"
             else:
+                # status 404 with message
                 return f"Le manga avec l'id {id_select} n'existe pas"
         else:
+            # status 400 with message
             return f"La méthode n'est pas bonne"
 
 
